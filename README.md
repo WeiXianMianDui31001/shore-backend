@@ -45,46 +45,16 @@ backend/
 - PostgreSQL 14+
 - Redis 6+
 
-### 2. 创建数据库
 
-```sql
-CREATE DATABASE shore_db;
-```
 
-### 3. 执行初始化脚本
+### 2. 执行初始化脚本
 
-运行 `src/main/resources/schema.sql` 创建表结构并插入默认数据：
+在docker文件目录下运行docker compose up -d后在idea中启动程序即可
+### 3. 修改配置
 
-- 管理员账号：`admin@anzs.com` / `admin123`
-- 初始积分规则
+编辑 `src/main/resources/application.yml`（不用动）
 
-### 4. 修改配置
 
-编辑 `src/main/resources/application.yml`：
-
-```yaml
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/shore_db?currentSchema=public&stringtype=unspecified
-    username: postgres
-    password: your_password
-  redis:
-    host: localhost
-    port: 6379
-    password: your_redis_password  # 若无密码留空
-```
-
-### 5. 编译运行
-
-```bash
-# 编译
-mvn clean compile
-
-# 运行
-mvn spring-boot:run
-```
-
-服务默认启动在 `http://localhost:8080`
 
 ## 默认管理员
 
@@ -97,10 +67,3 @@ mvn spring-boot:run
 
 WebSocket 地址：`ws://localhost:8080/ws/room/{roomId}?token={JWT}`
 
-## 注意事项
-
-1. **JWT 密钥**：生产环境请务必修改 `application.yml` 中的 `shore.jwt.secret`
-2. **文件上传**：当前 `prepareUpload` 为简化实现，生产环境建议对接 OSS（如 MinIO、阿里云 OSS）生成预签名 URL
-3. **邮件发送**：验证码邮件发送逻辑目前为 TODO，需集成邮件服务（如 JavaMail、SendGrid）
-4. **PDF 导出**：简历 PDF 导出目前仅创建记录，需补充异步生成逻辑
-5. **编译环境**：若本地无 Maven，可使用 IDE（IntelliJ IDEA / VS Code）导入后运行
