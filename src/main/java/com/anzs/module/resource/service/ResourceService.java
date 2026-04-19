@@ -4,6 +4,7 @@ import com.anzs.common.exception.BizException;
 import com.anzs.common.util.JwtUtil;
 import com.anzs.config.security.SecurityUser;
 import com.anzs.infrastructure.cache.RedisCache;
+import com.anzs.infrastructure.storage.AliOssService;
 import com.anzs.module.resource.dto.ResourceSubmitDTO;
 import com.anzs.module.resource.entity.DownloadRecord;
 import com.anzs.module.resource.entity.Resource;
@@ -41,6 +42,7 @@ public class ResourceService {
     private final PointsTransactionMapper pointsTransactionMapper;
     private final PointsRuleMapper pointsRuleMapper;
     private final RedisCache redisCache;
+    private final AliOssService aliOssService;
 
     public IPage<Resource> list(String keyword, String category, Integer page, Integer size) {
         Page<Resource> p = new Page<>(page, size);
@@ -99,7 +101,7 @@ public class ResourceService {
         String uploadId = java.util.UUID.randomUUID().toString();
         Map<String, Object> map = new HashMap<>();
         map.put("uploadId", uploadId);
-        map.put("preSignedUrl", "/api/v1/upload/tmp/" + uploadId);
+        map.put("preSignedUrl", aliOssService.generateUploadUrl(uploadId + "-" + fileName));
         map.put("expireSeconds", 300);
         return map;
     }

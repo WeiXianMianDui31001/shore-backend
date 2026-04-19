@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 public class EmailService {
     @Value("${spring.mail.username}")
     private String sysMailAddress;
+
     private final JavaMailSender mailSender;
     public void sendVerifyCode(String email, String code, String scene) {
         log.info("[邮件模拟发送] 邮箱: {}, 场景: {}, 验证码: {}", email, scene, code);
