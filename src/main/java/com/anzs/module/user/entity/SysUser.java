@@ -20,7 +20,6 @@ public class SysUser {
     private Integer role;        // 0-备考 1-求职 2-管理员
     private Integer status;      // 0-正常 1-禁用
     private Integer pointsBalance;
-    private String studentEmail;
     private LocalDateTime lastLoginAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

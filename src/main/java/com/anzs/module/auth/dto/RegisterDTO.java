@@ -20,5 +20,4 @@ public class RegisterDTO {
     @NotNull(message = "角色不能为空")
     private Integer role;
 
-    private String studentEmail;
 }

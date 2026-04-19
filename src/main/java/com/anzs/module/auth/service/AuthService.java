@@ -56,7 +56,7 @@ public class AuthService {
         user.setEmail(dto.getEmail());
         user.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
         user.setRole(dto.getRole());
-        user.setStudentEmail(dto.getStudentEmail());
+//        user.setStudentEmail(dto.getStudentEmail());
         user.setNickname(dto.getEmail().split("@")[0]);
         user.setStatus(0);
         user.setPointsBalance(20); // 注册赠送初始积分

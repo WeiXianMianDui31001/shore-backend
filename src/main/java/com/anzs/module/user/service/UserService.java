@@ -31,7 +31,6 @@ public class UserService {
         map.put("avatarUrl", user.getAvatarUrl());
         map.put("role", user.getRole());
         map.put("pointsBalance", user.getPointsBalance());
-        map.put("studentEmail", user.getStudentEmail());
         map.put("createdAt", user.getCreatedAt());
         return map;
     }

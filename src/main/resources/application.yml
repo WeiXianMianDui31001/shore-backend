@@ -4,7 +4,8 @@ server:
 spring:
   application:
     name: shore-backend
-
+  profiles:
+    active: dev
   datasource:
     url: jdbc:postgresql://localhost:5432/shore_db?currentSchema=public&stringtype=unspecified
     username: postgres
