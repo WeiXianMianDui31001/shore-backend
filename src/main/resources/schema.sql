@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS resource (
     category VARCHAR(64),
     tags JSONB,
     description TEXT,
-    file_url VARCHAR(512),
+    object_key VARCHAR(512),
     file_size BIGINT,
     file_type VARCHAR(32),
     status SMALLINT NOT NULL DEFAULT 0, -- 0待审 1通过 2驳回

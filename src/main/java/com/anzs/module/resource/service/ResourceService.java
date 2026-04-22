@@ -82,9 +82,10 @@ public class ResourceService {
         map.put("downloadCount", r.getDownloadCount());
         map.put("status", r.getStatus());
         map.put("uploaderId", r.getUploaderId());
-        boolean showUrl = currentUserId != null && (currentUserId.equals(r.getUploaderId())
+        boolean canDownload = currentUserId != null && (currentUserId.equals(r.getUploaderId())
                 || hasDownloaded(currentUserId, r.getId()));
-        map.put("fileUrl", showUrl ? r.getFileUrl() : null);
+        map.put("canDownload", canDownload);
+        map.put("fileUrl", null); // 不直接暴露原始 OSS URL
         return map;
     }
 
@@ -97,30 +98,52 @@ public class ResourceService {
     }
 
     public Map<String, Object> prepareUpload(String fileName, Long fileSize, String mimeType) {
-        // 简化：直接返回本地临时上传地址，实际生产应对接 OSS 预签名
         String uploadId = java.util.UUID.randomUUID().toString();
+        String objectKey = uploadId + "-" + fileName;
+
+        Map<String, Object> meta = new HashMap<>();
+        meta.put("objectKey", objectKey);
+        meta.put("fileSize", fileSize);
+        meta.put("fileType", mimeType);
+        redisCache.setObject("upload:meta:" + uploadId, meta, 10, TimeUnit.MINUTES);
+
         Map<String, Object> map = new HashMap<>();
         map.put("uploadId", uploadId);
-        map.put("preSignedUrl", aliOssService.generateUploadUrl(uploadId + "-" + fileName));
+        map.put("preSignedUrl", aliOssService.generateUploadUrl(objectKey));
         map.put("expireSeconds", 300);
         return map;
     }
 
     @Transactional
     public void submit(Long userId, ResourceSubmitDTO dto) {
+        String uploadId = dto.getUploadId();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> meta = redisCache.getObject("upload:meta:" + uploadId, Map.class);
+        if (meta == null) {
+            throw new BizException("上传会话已过期，请重新上传");
+        }
+        String objectKey = (String) meta.get("objectKey");
+        Object fileSizeObj = meta.get("fileSize");
+        Long fileSize = fileSizeObj instanceof Number ? ((Number) fileSizeObj).longValue() : null;
+        String fileType = (String) meta.get("fileType");
+
         Resource r = new Resource();
         r.setUploaderId(userId);
         r.setTitle(dto.getTitle());
         r.setCategory(dto.getCategory());
         r.setTags(dto.getTags());
         r.setDescription(dto.getDescription());
-        r.setFileUrl(dto.getUploadId()); // 简化：uploadId 即文件地址
+        r.setObjectKey(objectKey); // 存 objectKey，供下载时生成预签名URL
+        r.setFileSize(fileSize);
+        r.setFileType(fileType);
         r.setStatus(0);
         r.setPointsCost(5);
         r.setDownloadCount(0);
         r.setCreatedAt(LocalDateTime.now());
         r.setUpdatedAt(LocalDateTime.now());
         resourceMapper.insert(r);
+
+        redisCache.delete("upload:meta:" + uploadId);
     }
 
     @Transactional
@@ -129,7 +152,7 @@ public class ResourceService {
         if (r == null || r.getStatus() != 1) throw new BizException("资源不存在或未上架");
         if (userId.equals(r.getUploaderId())) {
             Map<String, Object> map = new HashMap<>();
-            map.put("fileUrl", r.getFileUrl());
+            map.put("fileUrl", aliOssService.generateDownloadUrl(r.getObjectKey()));
             map.put("costPoints", 0);
             return map;
         }
@@ -143,7 +166,7 @@ public class ResourceService {
         if (already) {
             redisCache.set(dupKey, "1", 24, TimeUnit.HOURS);
             Map<String, Object> map = new HashMap<>();
-            map.put("fileUrl", r.getFileUrl());
+            map.put("fileUrl", aliOssService.generateDownloadUrl(r.getObjectKey()));
             map.put("costPoints", 0);
             return map;
         }
@@ -216,7 +239,7 @@ public class ResourceService {
         redisCache.set(dupKey, "1", 24, TimeUnit.HOURS);
 
         Map<String, Object> map = new HashMap<>();
-        map.put("fileUrl", r.getFileUrl());
+        map.put("fileUrl", aliOssService.generateDownloadUrl(r.getObjectKey()));
         map.put("costPoints", r.getPointsCost());
         return map;
     }

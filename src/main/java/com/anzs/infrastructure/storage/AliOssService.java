@@ -15,16 +15,22 @@ import java.util.Date;
 public class AliOssService {
     @Value("${oss.bucketName}")
     private String bucketName;
+    @Value("${oss.endpoint}")
+    private String endpoint;
 
     private final OSS ossClient;
 
     public String generateUploadUrl(String objectName) {
-        Date expiration = new Date(System.currentTimeMillis() + 5 * 60 * 1000); // 5分钟过期
+        Date expiration = new Date(System.currentTimeMillis() + 5 * 60 * 1000);
         GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucketName, objectName, HttpMethod.PUT);
         request.setExpiration(expiration);
         URL url = ossClient.generatePresignedUrl(request);
         return url.toString();
     }
 
-
+    public String generateDownloadUrl(String objectName) {
+        Date expiration = new Date(System.currentTimeMillis() + 5 * 60 * 1000);
+        URL url = ossClient.generatePresignedUrl(bucketName, objectName, expiration);
+        return url.toString();
+    }
 }

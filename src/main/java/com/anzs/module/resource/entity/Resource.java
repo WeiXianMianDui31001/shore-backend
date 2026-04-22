@@ -20,7 +20,7 @@ public class Resource {
     @TableField(typeHandler = PgJsonbTypeHandler.class)
     private String tags;
     private String description;
-    private String fileUrl;
+    private String objectKey;
     private Long fileSize;
     private String fileType;
     private Integer status;      // 0-待审核 1-已通过 2-已驳回
