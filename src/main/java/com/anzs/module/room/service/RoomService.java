@@ -29,6 +29,8 @@ public class RoomService {
     private final RoomMemberMapper memberMapper;
     private final ChatMessageMapper chatMessageMapper;
     private final WhiteboardOperationMapper whiteboardOperationMapper;
+    private final RoomRedisService roomRedisService;
+    private final RoomArchiveService roomArchiveService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public IPage<DiscussionRoom> roomList(String keyword, Integer page, Integer size) {
@@ -101,17 +103,37 @@ public class RoomService {
     }
 
     public List<ChatMessage> messageHistory(Long roomId, Long lastSeq, Integer limit) {
+        if (roomRedisService.isRoomActive(roomId)) {
+            List<ChatMessage> all = roomRedisService.getAllChatMessages(roomId);
+            if (lastSeq != null && lastSeq > 0) {
+                all = all.stream().filter(m -> m.getSequenceNo() > lastSeq).toList();
+            }
+            if (all.size() > limit) {
+                return all.subList(all.size() - limit, all.size());
+            }
+            return all;
+        }
         LambdaQueryWrapper<ChatMessage> qw = new LambdaQueryWrapper<>();
         qw.eq(ChatMessage::getRoomId, roomId);
         if (lastSeq != null && lastSeq > 0) {
-            qw.gt(ChatMessage::getId, lastSeq);
+            qw.gt(ChatMessage::getSequenceNo, lastSeq);
         }
-        qw.orderByAsc(ChatMessage::getCreatedAt);
+        qw.orderByAsc(ChatMessage::getSequenceNo);
         qw.last("LIMIT " + limit);
         return chatMessageMapper.selectList(qw);
     }
 
     public List<WhiteboardOperation> whiteboardHistory(Long roomId, Long lastSeq, Integer limit) {
+        if (roomRedisService.isRoomActive(roomId)) {
+            List<WhiteboardOperation> all = roomRedisService.getAllWhiteboardOps(roomId);
+            if (lastSeq != null && lastSeq > 0) {
+                all = all.stream().filter(o -> o.getSequenceNo() > lastSeq).toList();
+            }
+            if (all.size() > limit) {
+                return all.subList(all.size() - limit, all.size());
+            }
+            return all;
+        }
         LambdaQueryWrapper<WhiteboardOperation> qw = new LambdaQueryWrapper<>();
         qw.eq(WhiteboardOperation::getRoomId, roomId);
         if (lastSeq != null && lastSeq > 0) {
@@ -146,5 +168,18 @@ public class RoomService {
         op.setCreatedAt(LocalDateTime.now());
         whiteboardOperationMapper.insert(op);
         return op;
+    }
+
+    @Transactional
+    public void closeRoom(Long userId, Long roomId) {
+        DiscussionRoom room = roomMapper.selectById(roomId);
+        if (room == null) throw new BizException("讨论室不存在");
+        if (!userId.equals(room.getCreatorId())) {
+            throw new BizException("只有房主可以关闭讨论室");
+        }
+        if (room.getStatus() != 0) {
+            throw new BizException("讨论室已关闭");
+        }
+        roomArchiveService.archiveRoom(roomId);
     }
 }

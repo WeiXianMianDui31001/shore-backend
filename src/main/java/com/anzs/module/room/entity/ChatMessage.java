@@ -17,5 +17,6 @@ public class ChatMessage {
     private Integer msgType;     // 0-文本 1-图片 2-文件 3-表情
     private String content;
     private String clientMsgId;
+    private Long sequenceNo;
     private LocalDateTime createdAt;
 }

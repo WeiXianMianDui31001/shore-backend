@@ -19,6 +19,7 @@ public class DiscussionRoom {
     private String passwordHash;
     private Integer maxMembers;
     private LocalDateTime expireAt;
+    private LocalDateTime closedAt;
     private Integer status;      // 0-开启 1-已关闭
     @TableField(typeHandler = PgJsonbTypeHandler.class)
     private String whiteboardSnapshot;

@@ -68,4 +68,49 @@ public class RedisCache {
     public Long pushList(String key, String value) {
         return stringRedisTemplate.opsForList().rightPush(key, value);
     }
+
+    public java.util.List<String> rangeList(String key, long start, long end) {
+        return stringRedisTemplate.opsForList().range(key, start, end);
+    }
+
+    public Long listSize(String key) {
+        return stringRedisTemplate.opsForList().size(key);
+    }
+
+    public void trimList(String key, long start, long end) {
+        stringRedisTemplate.opsForList().trim(key, start, end);
+    }
+
+    public java.util.Set<String> setMembers(String key) {
+        return stringRedisTemplate.opsForSet().members(key);
+    }
+
+    public Long setSize(String key) {
+        return stringRedisTemplate.opsForSet().size(key);
+    }
+
+    public void setHash(String key, String hashKey, String value) {
+        stringRedisTemplate.opsForHash().put(key, hashKey, value);
+    }
+
+    public String getHash(String key, String hashKey) {
+        Object val = stringRedisTemplate.opsForHash().get(key, hashKey);
+        return val == null ? null : val.toString();
+    }
+
+    public java.util.Map<Object, Object> getHashAll(String key) {
+        return stringRedisTemplate.opsForHash().entries(key);
+    }
+
+    public Long deleteHash(String key, Object... hashKeys) {
+        return stringRedisTemplate.opsForHash().delete(key, hashKeys);
+    }
+
+    public Boolean expire(String key, long timeout, TimeUnit unit) {
+        return stringRedisTemplate.expire(key, timeout, unit);
+    }
+
+    public java.util.Set<String> keys(String pattern) {
+        return stringRedisTemplate.keys(pattern);
+    }
 }

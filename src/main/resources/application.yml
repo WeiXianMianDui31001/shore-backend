@@ -60,10 +60,5 @@ shore:
     secret: "shore-backend-jwt-secret-key-2026-must-be-long-enough"
     access-token-expire: 7200000        # 2h (ms)
     refresh-token-expire: 604800000     # 7d (ms)
-  oss:
-    endpoint: http://localhost:9000
-    access-key: minioadmin
-    secret-key: minioadmin
-    bucket-name: shore
   pdf:
     temp-dir: ./temp/pdf

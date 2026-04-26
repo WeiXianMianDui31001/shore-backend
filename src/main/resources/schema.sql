@@ -166,6 +166,7 @@ CREATE TABLE IF NOT EXISTS discussion_room (
     password_hash VARCHAR(256),
     max_members INT NOT NULL DEFAULT 50,
     expire_at TIMESTAMP,
+    closed_at TIMESTAMP,
     status SMALLINT NOT NULL DEFAULT 0, -- 0开启 1关闭
     whiteboard_snapshot JSONB,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -190,9 +191,10 @@ CREATE TABLE IF NOT EXISTS chat_message (
     msg_type SMALLINT NOT NULL DEFAULT 0, -- 0文本 1图片 2文件 3表情
     content TEXT,
     client_msg_id VARCHAR(64),
+    sequence_no BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_chat_room ON chat_message(room_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_chat_room ON chat_message(room_id, sequence_no DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_client_id ON chat_message(client_msg_id);
 
 -- 14. 画板操作表
