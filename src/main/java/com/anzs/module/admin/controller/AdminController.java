@@ -38,6 +38,11 @@ public class AdminController {
         return Result.ok(adminService.auditList(status, page, size));
     }
 
+    @GetMapping("/resources/{id}/preview")
+    public Result<String> previewResource(@PathVariable Long id) {
+        return Result.ok(adminService.previewResource(id));
+    }
+
     @PostMapping("/resources/{id}/audit")
     public Result<Void> auditResource(@AuthenticationPrincipal SecurityUser user,
                                       @PathVariable Long id,
@@ -130,6 +135,21 @@ public class AdminController {
                                         @PathVariable Long targetId,
                                         @RequestBody @Valid CommunityActionDTO dto) {
         adminService.communityAction(user.getUser().getId(), targetType, targetId, dto.getAction(), dto.getReason());
+        return Result.ok();
+    }
+
+    // === 帖子加精 ===
+    @GetMapping("/community/posts/pending-excellent")
+    public Result<IPage<com.anzs.module.community.vo.PostVO>> pendingExcellentPosts(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+        return Result.ok(adminService.pendingExcellentPosts(page, size));
+    }
+
+    @PostMapping("/community/posts/{id}/excellent")
+    public Result<Void> excellentPost(@AuthenticationPrincipal SecurityUser user,
+                                      @PathVariable Long id) {
+        adminService.excellentPost(user.getUser().getId(), id);
         return Result.ok();
     }
 }

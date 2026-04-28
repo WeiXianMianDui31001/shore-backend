@@ -18,7 +18,6 @@ public class EmailService {
     private final JavaMailSender mailSender;
     public void sendVerifyCode(String email, String code, String scene) {
         log.info("[邮件模拟发送] 邮箱: {}, 场景: {}, 验证码: {}", email, scene, code);
-        // TODO: 接入真实邮件服务（JavaMail / SendGrid / 阿里云邮件推送）
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(sysMailAddress);
         message.setTo(email);

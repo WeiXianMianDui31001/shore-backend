@@ -20,7 +20,7 @@ public class AliOssService {
 
     private final OSS ossClient;
 
-    public String generateUploadUrl(String objectName) {
+    public String generateUploadUrl(String objectName, String contentType) {
         Date expiration = new Date(System.currentTimeMillis() + 5 * 60 * 1000);
         GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucketName, objectName, HttpMethod.PUT);
         request.setExpiration(expiration);

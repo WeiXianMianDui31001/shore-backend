@@ -19,9 +19,16 @@ public class Post {
     private String content;
     @TableField(typeHandler = PgJsonbTypeHandler.class)
     private String tags;
+    @TableField(typeHandler = PgJsonbTypeHandler.class)
+    private String images;
+    private Integer scene;       // 0-考研 1-求职
     private Integer status;      // 0-正常 1-已解决 2-已下架
     private Boolean isPinned;
     private Integer viewCount;
+    private Integer likeCount;
+    private Integer collectCount;
+    private Integer endorseCount;
+    private Boolean isExcellent;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

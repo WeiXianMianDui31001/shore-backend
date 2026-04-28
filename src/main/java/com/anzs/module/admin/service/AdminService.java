@@ -45,6 +45,8 @@ public class AdminService {
     private final CommentMapper commentMapper;
     private final AdminLogMapper adminLogMapper;
     private final NotificationService notificationService;
+    private final com.anzs.module.user.service.PointsService pointsService;
+    private final com.anzs.infrastructure.storage.AliOssService aliOssService;
 
     public IPage<Resource> auditList(Integer status, Integer page, Integer size) {
         Page<Resource> p = new Page<>(page, size);
@@ -52,6 +54,12 @@ public class AdminService {
         if (status != null) qw.eq(Resource::getStatus, status);
         qw.orderByDesc(Resource::getCreatedAt);
         return resourceMapper.selectPage(p, qw);
+    }
+
+    public String previewResource(Long resourceId) {
+        Resource r = resourceMapper.selectById(resourceId);
+        if (r == null) throw new BizException("资源不存在");
+        return aliOssService.generateDownloadUrl(r.getObjectKey());
     }
 
     @Transactional
@@ -79,12 +87,7 @@ public class AdminService {
         if (action == 1) {
             PointsRule rule = pointsRuleMapper.selectCurrentActive();
             if (rule != null && rule.getUploadReward() != null && rule.getUploadReward() > 0) {
-                SysUser uploader = sysUserMapper.selectById(r.getUploaderId());
-                sysUserMapper.update(null, new LambdaUpdateWrapper<SysUser>()
-                        .eq(SysUser::getId, r.getUploaderId())
-                        .setSql("points_balance = points_balance + " + rule.getUploadReward())
-                        .set(SysUser::getUpdatedAt, LocalDateTime.now()));
-                // 简化：不发流水了，实际应发
+                pointsService.addPoints(r.getUploaderId(), rule.getUploadReward(), "UPLOAD_REWARD", resourceId, "资源通过审核奖励");
             }
         }
 
@@ -189,6 +192,61 @@ public class AdminService {
 
     public SysUser userDetail(Long userId) {
         return sysUserMapper.selectById(userId);
+    }
+
+    public IPage<com.anzs.module.community.vo.PostVO> pendingExcellentPosts(Integer page, Integer size) {
+        Page<com.anzs.module.community.entity.Post> p = new Page<>(page, size);
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.anzs.module.community.entity.Post> qw = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        qw.ge(com.anzs.module.community.entity.Post::getEndorseCount, 3)
+          .eq(com.anzs.module.community.entity.Post::getIsExcellent, false)
+          .orderByDesc(com.anzs.module.community.entity.Post::getEndorseCount);
+        com.baomidou.mybatisplus.core.metadata.IPage<com.anzs.module.community.entity.Post> postPage = postMapper.selectPage(p, qw);
+        java.util.List<com.anzs.module.community.vo.PostVO> voList = postPage.getRecords().stream()
+                .map(post -> {
+                    com.anzs.module.community.vo.PostVO vo = new com.anzs.module.community.vo.PostVO();
+                    vo.setId(post.getId());
+                    vo.setAuthorId(post.getAuthorId());
+                    vo.setTitle(post.getTitle());
+                    vo.setContent(post.getContent());
+                    vo.setTags(post.getTags());
+                    vo.setImages(post.getImages());
+                    vo.setScene(post.getScene());
+                    vo.setStatus(post.getStatus());
+                    vo.setIsPinned(post.getIsPinned());
+                    vo.setIsExcellent(post.getIsExcellent());
+                    vo.setViewCount(post.getViewCount());
+                    vo.setLikeCount(post.getLikeCount());
+                    vo.setCollectCount(post.getCollectCount());
+                    vo.setEndorseCount(post.getEndorseCount());
+                    vo.setCreatedAt(post.getCreatedAt());
+                    vo.setUpdatedAt(post.getUpdatedAt());
+                    SysUser author = sysUserMapper.selectById(post.getAuthorId());
+                    if (author != null) {
+                        vo.setAuthorNickname(author.getNickname());
+                        vo.setAuthorAvatar(author.getAvatarUrl());
+                        vo.setAuthorRole(author.getRole());
+                    }
+                    return vo;
+                })
+                .collect(java.util.stream.Collectors.toList());
+        Page<com.anzs.module.community.vo.PostVO> result = new Page<>(page, size);
+        result.setRecords(voList);
+        result.setTotal(postPage.getTotal());
+        return result;
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void excellentPost(Long adminId, Long postId) {
+        com.anzs.module.community.entity.Post post = postMapper.selectById(postId);
+        if (post == null) throw new BizException("帖子不存在");
+        post.setIsExcellent(true);
+        post.setUpdatedAt(LocalDateTime.now());
+        postMapper.updateById(post);
+
+        // 奖励发帖人积分
+        pointsService.addPoints(post.getAuthorId(), 20, "EXCELLENT_POST", postId, "帖子被加精为经验帖");
+
+        logAdminAction(adminId, "EXCELLENT_POST", "POST", postId, java.util.Map.of("title", post.getTitle()));
     }
 
     @Transactional

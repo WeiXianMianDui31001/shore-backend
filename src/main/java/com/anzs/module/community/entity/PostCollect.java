@@ -1,8 +1,6 @@
 package com.anzs.module.community.entity;
 
-import com.anzs.config.PgJsonbTypeHandler;
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -10,16 +8,11 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("comment")
-public class Comment {
+@TableName("post_collect")
+public class PostCollect {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
     private Long postId;
-    private Long parentId;
-    private Long authorId;
-    private String content;
-    @TableField(typeHandler = PgJsonbTypeHandler.class)
-    private String images;
-    private Integer status;      // 0-正常 1-已删除
+    private Long userId;
     private LocalDateTime createdAt;
 }

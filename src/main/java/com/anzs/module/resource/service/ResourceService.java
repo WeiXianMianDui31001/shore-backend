@@ -18,11 +18,13 @@ import com.anzs.module.user.entity.SysUser;
 import com.anzs.module.user.mapper.PointsRuleMapper;
 import com.anzs.module.user.mapper.PointsTransactionMapper;
 import com.anzs.module.user.mapper.SysUserMapper;
+import com.anzs.module.user.service.PointsService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ResourceService {
@@ -41,6 +44,7 @@ public class ResourceService {
     private final SysUserMapper sysUserMapper;
     private final PointsTransactionMapper pointsTransactionMapper;
     private final PointsRuleMapper pointsRuleMapper;
+    private final PointsService pointsService;
     private final RedisCache redisCache;
     private final AliOssService aliOssService;
 
@@ -109,7 +113,7 @@ public class ResourceService {
 
         Map<String, Object> map = new HashMap<>();
         map.put("uploadId", uploadId);
-        map.put("preSignedUrl", aliOssService.generateUploadUrl(objectKey));
+        map.put("preSignedUrl", aliOssService.generateUploadUrl(objectKey, mimeType));
         map.put("expireSeconds", 300);
         return map;
     }
@@ -137,7 +141,8 @@ public class ResourceService {
         r.setFileSize(fileSize);
         r.setFileType(fileType);
         r.setStatus(0);
-        r.setPointsCost(5);
+        PointsRule rule = pointsRuleMapper.selectCurrentActive();
+        r.setPointsCost(rule != null && rule.getDownloadCost() != null ? rule.getDownloadCost() : 5);
         r.setDownloadCount(0);
         r.setCreatedAt(LocalDateTime.now());
         r.setUpdatedAt(LocalDateTime.now());
@@ -150,12 +155,16 @@ public class ResourceService {
     public Map<String, Object> download(Long userId, Long resourceId) {
         Resource r = resourceMapper.selectById(resourceId);
         if (r == null || r.getStatus() != 1) throw new BizException("资源不存在或未上架");
+
+        // 上传者本人下载：不计次数，不扣积分
         if (userId.equals(r.getUploaderId())) {
+            log.info("资源[{}]被上传者[{}]本人下载，跳过计数", resourceId, userId);
             Map<String, Object> map = new HashMap<>();
             map.put("fileUrl", aliOssService.generateDownloadUrl(r.getObjectKey()));
             map.put("costPoints", 0);
             return map;
         }
+
         String dupKey = "download:" + userId + ":" + resourceId;
         boolean already = redisCache.hasKey(dupKey);
         if (!already) {
@@ -164,6 +173,7 @@ public class ResourceService {
                     .eq(DownloadRecord::getResourceId, resourceId)) > 0;
         }
         if (already) {
+            log.info("用户[{}]重复下载资源[{}]，直接返回链接", userId, resourceId);
             redisCache.set(dupKey, "1", 24, TimeUnit.HOURS);
             Map<String, Object> map = new HashMap<>();
             map.put("fileUrl", aliOssService.generateDownloadUrl(r.getObjectKey()));
@@ -182,44 +192,13 @@ public class ResourceService {
             reward = (int) (r.getPointsCost() * rule.getShareRatio().doubleValue());
         }
 
-        // 扣减下载者积分
-        int rows = sysUserMapper.update(null, new LambdaUpdateWrapper<SysUser>()
-                .eq(SysUser::getId, userId)
-                .ge(SysUser::getPointsBalance, r.getPointsCost())
-                .setSql("points_balance = points_balance - " + r.getPointsCost())
-                .set(SysUser::getUpdatedAt, LocalDateTime.now()));
-        if (rows == 0) throw new BizException("积分不足或并发冲突，请重试");
+        // 扣减下载者积分（走统一积分服务）
+        boolean ok = pointsService.deductPoints(userId, r.getPointsCost(), "DOWNLOAD", resourceId, "下载资源");
+        if (!ok) throw new BizException("积分不足或并发冲突，请重试");
 
-        // 增加上传者积分
+        // 上传者分成（走统一积分服务）
         if (reward > 0) {
-            sysUserMapper.update(null, new LambdaUpdateWrapper<SysUser>()
-                    .eq(SysUser::getId, r.getUploaderId())
-                    .setSql("points_balance = points_balance + " + reward)
-                    .set(SysUser::getUpdatedAt, LocalDateTime.now()));
-        }
-
-        // 流水
-        PointsTransaction txOut = new PointsTransaction();
-        txOut.setUserId(userId);
-        txOut.setType(2);
-        txOut.setAmount(-r.getPointsCost());
-        txOut.setBalanceAfter(downloader.getPointsBalance() - r.getPointsCost());
-        txOut.setSourceType("DOWNLOAD");
-        txOut.setBizId(resourceId);
-        txOut.setCreatedAt(LocalDateTime.now());
-        pointsTransactionMapper.insert(txOut);
-
-        if (reward > 0) {
-            SysUser uploader = sysUserMapper.selectById(r.getUploaderId());
-            PointsTransaction txIn = new PointsTransaction();
-            txIn.setUserId(r.getUploaderId());
-            txIn.setType(1);
-            txIn.setAmount(reward);
-            txIn.setBalanceAfter(uploader.getPointsBalance() + reward);
-            txIn.setSourceType("DOWNLOAD_REWARD");
-            txIn.setBizId(resourceId);
-            txIn.setCreatedAt(LocalDateTime.now());
-            pointsTransactionMapper.insert(txIn);
+            pointsService.addPoints(r.getUploaderId(), reward, "DOWNLOAD_REWARD", resourceId, "资源被下载奖励");
         }
 
         // 下载记录
@@ -232,9 +211,11 @@ public class ResourceService {
         downloadRecordMapper.insert(dr);
 
         // 更新下载次数
-        resourceMapper.update(null, new LambdaUpdateWrapper<Resource>()
+        int rows = resourceMapper.update(null, new LambdaUpdateWrapper<Resource>()
                 .eq(Resource::getId, resourceId)
                 .setSql("download_count = download_count + 1"));
+        log.info("用户[{}]首次下载资源[{}]，扣除积分[{}]，上传者分成[{}]，更新下载次数影响行数=[{}]",
+                userId, resourceId, r.getPointsCost(), reward, rows);
 
         redisCache.set(dupKey, "1", 24, TimeUnit.HOURS);
 

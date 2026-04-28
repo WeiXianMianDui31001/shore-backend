@@ -47,14 +47,40 @@ public class UserService {
 
     public Map<String, Object> getPointsSummary(Long userId) {
         SysUser user = sysUserMapper.selectById(userId);
-        // 简单统计今日
-        // 生产环境可改为按 created_at >= today 聚合
+        LocalDateTime todayStart = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+
+        int todayIncome = pointsTransactionMapper.selectList(
+                new LambdaQueryWrapper<PointsTransaction>()
+                        .eq(PointsTransaction::getUserId, userId)
+                        .eq(PointsTransaction::getType, 1)
+                        .ge(PointsTransaction::getCreatedAt, todayStart))
+                .stream().mapToInt(PointsTransaction::getAmount).sum();
+
+        int todayExpense = Math.abs(pointsTransactionMapper.selectList(
+                new LambdaQueryWrapper<PointsTransaction>()
+                        .eq(PointsTransaction::getUserId, userId)
+                        .eq(PointsTransaction::getType, 2)
+                        .ge(PointsTransaction::getCreatedAt, todayStart))
+                .stream().mapToInt(PointsTransaction::getAmount).sum());
+
+        int totalIncome = pointsTransactionMapper.selectList(
+                new LambdaQueryWrapper<PointsTransaction>()
+                        .eq(PointsTransaction::getUserId, userId)
+                        .eq(PointsTransaction::getType, 1))
+                .stream().mapToInt(PointsTransaction::getAmount).sum();
+
+        int totalExpense = Math.abs(pointsTransactionMapper.selectList(
+                new LambdaQueryWrapper<PointsTransaction>()
+                        .eq(PointsTransaction::getUserId, userId)
+                        .eq(PointsTransaction::getType, 2))
+                .stream().mapToInt(PointsTransaction::getAmount).sum());
+
         Map<String, Object> map = new HashMap<>();
         map.put("balance", user.getPointsBalance());
-        map.put("todayIncome", 0);
-        map.put("todayExpense", 0);
-        map.put("totalIncome", 0);
-        map.put("totalExpense", 0);
+        map.put("todayIncome", todayIncome);
+        map.put("todayExpense", todayExpense);
+        map.put("totalIncome", totalIncome);
+        map.put("totalExpense", totalExpense);
         return map;
     }
 

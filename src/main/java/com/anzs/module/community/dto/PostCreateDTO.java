@@ -9,4 +9,6 @@ public class PostCreateDTO {
     private String title;
     private String content;
     private String tags;
+    private String images;
+    private Integer scene;
 }

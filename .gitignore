@@ -54,3 +54,6 @@ tmp/
 
 ### Docker ###
 volumes/
+
+### Application Secrets ###
+src/main/resources/application-dev.yml

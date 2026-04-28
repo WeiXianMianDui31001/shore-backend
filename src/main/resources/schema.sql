@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS resource (
     description TEXT,
     object_key VARCHAR(512),
     file_size BIGINT,
-    file_type VARCHAR(32),
+    file_type VARCHAR(128),
     status SMALLINT NOT NULL DEFAULT 0, -- 0待审 1通过 2驳回
     points_cost INT NOT NULL DEFAULT 0,
     download_count INT NOT NULL DEFAULT 0,
@@ -122,27 +122,68 @@ CREATE TABLE IF NOT EXISTS post (
     title VARCHAR(256) NOT NULL,
     content TEXT,
     tags JSONB,
+    images JSONB,
+    scene SMALLINT NOT NULL DEFAULT 0, -- 0考研 1求职
     status SMALLINT NOT NULL DEFAULT 0, -- 0正常 1已解决 2已下架
     is_pinned BOOLEAN NOT NULL DEFAULT false,
     view_count INT NOT NULL DEFAULT 0,
+    like_count INT NOT NULL DEFAULT 0,
+    collect_count INT NOT NULL DEFAULT 0,
+    endorse_count INT NOT NULL DEFAULT 0,
+    is_excellent BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_post_status_created ON post(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_post_author ON post(author_id);
+CREATE INDEX IF NOT EXISTS idx_post_scene ON post(scene, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_post_title_trgm ON post USING GIN (title gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_post_content_trgm ON post USING GIN (content gin_trgm_ops);
 
--- 9. 评论表
+-- 9. 点赞表
+CREATE TABLE IF NOT EXISTS post_like (
+    id BIGINT PRIMARY KEY,
+    post_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_post_user_like UNIQUE (post_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_post_like_user ON post_like(user_id, created_at DESC);
+
+-- 10. 收藏表
+CREATE TABLE IF NOT EXISTS post_collect (
+    id BIGINT PRIMARY KEY,
+    post_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_post_user_collect UNIQUE (post_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_post_collect_user ON post_collect(user_id, created_at DESC);
+
+-- 11. 评论表
 CREATE TABLE IF NOT EXISTS comment (
     id BIGINT PRIMARY KEY,
     post_id BIGINT NOT NULL,
     parent_id BIGINT,
     author_id BIGINT NOT NULL,
     content TEXT,
+    images JSONB,
     status SMALLINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_comment_post ON comment(post_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_comment_parent ON comment(parent_id);
+
+-- 12. 帖子认可表
+CREATE TABLE IF NOT EXISTS post_endorse (
+    id BIGINT PRIMARY KEY,
+    post_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_post_endorse_user UNIQUE (post_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_post_endorse_post ON post_endorse(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_endorse_user ON post_endorse(user_id);
 
 -- 10. 通知表
 CREATE TABLE IF NOT EXISTS notification (
