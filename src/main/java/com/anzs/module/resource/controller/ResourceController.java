@@ -64,4 +64,24 @@ public class ResourceController {
             @RequestParam(defaultValue = "20") Integer size) {
         return Result.ok(resourceService.myUploads(user.getUser().getId(), status, page, size));
     }
+
+    @PostMapping("/{id}/collect")
+    public Result<Void> collect(@AuthenticationPrincipal SecurityUser user, @PathVariable Long id) {
+        resourceService.collectResource(user.getUser().getId(), id);
+        return Result.ok();
+    }
+
+    @DeleteMapping("/{id}/collect")
+    public Result<Void> uncollect(@AuthenticationPrincipal SecurityUser user, @PathVariable Long id) {
+        resourceService.uncollectResource(user.getUser().getId(), id);
+        return Result.ok();
+    }
+
+    @GetMapping("/my-collects")
+    public Result<IPage<Resource>> myCollects(
+            @AuthenticationPrincipal SecurityUser user,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+        return Result.ok(resourceService.myFavorites(user.getUser().getId(), page, size));
+    }
 }

@@ -72,6 +72,14 @@ public class CommunityController {
         return Result.ok();
     }
 
+    @GetMapping("/my-collects")
+    public Result<IPage<PostVO>> myCollects(
+            @AuthenticationPrincipal SecurityUser user,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+        return Result.ok(communityService.myCollects(user.getUser().getId(), page, size));
+    }
+
     @GetMapping("/recommend")
     public Result<IPage<PostVO>> recommend(
             @AuthenticationPrincipal SecurityUser user,

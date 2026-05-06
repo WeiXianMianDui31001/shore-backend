@@ -40,7 +40,8 @@ public class UserController {
     public Result<IPage<PointsTransaction>> transactions(
             @AuthenticationPrincipal SecurityUser user,
             @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "20") Integer size) {
-        return Result.ok(userService.getPointsTransactions(user.getUser().getId(), page, size));
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) String sourceType) {
+        return Result.ok(userService.getPointsTransactions(user.getUser().getId(), page, size, sourceType));
     }
 }

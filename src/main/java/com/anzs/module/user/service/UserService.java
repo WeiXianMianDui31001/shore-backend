@@ -84,11 +84,14 @@ public class UserService {
         return map;
     }
 
-    public IPage<PointsTransaction> getPointsTransactions(Long userId, Integer page, Integer size) {
+    public IPage<PointsTransaction> getPointsTransactions(Long userId, Integer page, Integer size, String sourceType) {
         Page<PointsTransaction> p = new Page<>(page, size);
-        return pointsTransactionMapper.selectPage(p,
-                new LambdaQueryWrapper<PointsTransaction>()
-                        .eq(PointsTransaction::getUserId, userId)
-                        .orderByDesc(PointsTransaction::getCreatedAt));
+        LambdaQueryWrapper<PointsTransaction> qw = new LambdaQueryWrapper<>();
+        qw.eq(PointsTransaction::getUserId, userId);
+        if (sourceType != null && !sourceType.isEmpty()) {
+            qw.eq(PointsTransaction::getSourceType, sourceType);
+        }
+        qw.orderByDesc(PointsTransaction::getCreatedAt);
+        return pointsTransactionMapper.selectPage(p, qw);
     }
 }

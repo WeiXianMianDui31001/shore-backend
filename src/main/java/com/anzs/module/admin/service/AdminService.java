@@ -24,6 +24,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +48,7 @@ public class AdminService {
     private final NotificationService notificationService;
     private final com.anzs.module.user.service.PointsService pointsService;
     private final com.anzs.infrastructure.storage.AliOssService aliOssService;
+    private final PasswordEncoder passwordEncoder;
 
     public IPage<Resource> auditList(Integer status, Integer page, Integer size) {
         Page<Resource> p = new Page<>(page, size);
@@ -258,6 +260,43 @@ public class AdminService {
         user.setUpdatedAt(LocalDateTime.now());
         sysUserMapper.updateById(user);
         logAdminAction(adminId, "UPDATE_USER_STATUS", "USER", userId, Map.of("status", status, "reason", reason));
+    }
+
+    @Transactional
+    public void resetUserPassword(Long adminId, Long userId, String newPassword) {
+        if (adminId.equals(userId)) throw new BizException("不能重置自己的密码");
+        SysUser user = sysUserMapper.selectById(userId);
+        if (user == null) throw new BizException("用户不存在");
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(LocalDateTime.now());
+        sysUserMapper.updateById(user);
+        logAdminAction(adminId, "RESET_PASSWORD", "USER", userId, Map.of());
+    }
+
+    @Transactional
+    public void updatePointsRuleCurrent(Long adminId, com.anzs.module.admin.dto.PointsRuleUpdateDTO dto) {
+        PointsRule current = pointsRuleMapper.selectCurrentActive();
+        if (current == null) {
+            current = new PointsRule();
+            current.setVersion(1);
+            current.setIsActive(true);
+            current.setCreatedBy(adminId);
+            current.setCreatedAt(LocalDateTime.now());
+        }
+        current.setDownloadCost(dto.getDownloadCost());
+        current.setUploadReward(dto.getUploadReward());
+        current.setShareRatio(dto.getShareRatio());
+        current.setDailyLimit(dto.getDailyLimit());
+        current.setChangeNote(dto.getChangeNote() != null ? dto.getChangeNote() : "管理员直接修改");
+        current.setEffectiveTime(LocalDateTime.now());
+        if (current.getId() == null) {
+            pointsRuleMapper.insert(current);
+        } else {
+            pointsRuleMapper.updateById(current);
+        }
+        logAdminAction(adminId, "UPDATE_RULE", "POINTS_RULE", current.getId(),
+                Map.of("downloadCost", dto.getDownloadCost(), "uploadReward", dto.getUploadReward(),
+                        "shareRatio", dto.getShareRatio(), "dailyLimit", dto.getDailyLimit()));
     }
 
     @Transactional

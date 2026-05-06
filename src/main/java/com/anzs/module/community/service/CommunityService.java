@@ -14,6 +14,7 @@ import com.anzs.module.community.mapper.PostEndorseMapper;
 import com.anzs.module.community.mapper.PostLikeMapper;
 import com.anzs.module.community.mapper.PostMapper;
 import com.anzs.module.community.vo.PostVO;
+import com.anzs.module.notification.service.NotificationService;
 import com.anzs.module.user.entity.SysUser;
 import com.anzs.module.user.mapper.SysUserMapper;
 import com.anzs.module.user.service.PointsService;
@@ -49,6 +50,7 @@ public class CommunityService {
     private final RedisCache redisCache;
     private final ObjectMapper objectMapper;
     private final PointsService pointsService;
+    private final NotificationService notificationService;
 
     @Value("${shore.upload.path}")
     private String uploadPath;
@@ -141,6 +143,9 @@ public class CommunityService {
         postMapper.update(null, new LambdaUpdateWrapper<Post>()
                 .eq(Post::getId, postId)
                 .setSql("like_count = like_count + 1"));
+        if (!post.getAuthorId().equals(userId)) {
+            sendInteractionNotification(userId, post.getAuthorId(), "点赞了你的帖子", post.getTitle(), postId, "POST_LIKE");
+        }
     }
 
     @Transactional
@@ -173,6 +178,9 @@ public class CommunityService {
         postMapper.update(null, new LambdaUpdateWrapper<Post>()
                 .eq(Post::getId, postId)
                 .setSql("collect_count = collect_count + 1"));
+        if (!post.getAuthorId().equals(userId)) {
+            sendInteractionNotification(userId, post.getAuthorId(), "收藏了你的帖子", post.getTitle(), postId, "POST_COLLECT");
+        }
     }
 
     @Transactional
@@ -190,6 +198,19 @@ public class CommunityService {
     }
 
     // ========== Recommendation ==========
+
+    public IPage<PostVO> myCollects(Long userId, Integer page, Integer size) {
+        int offset = (page - 1) * size;
+        List<Post> records = postMapper.selectUserCollectedPosts(userId, offset, size);
+        long total = postMapper.countUserCollectedPosts(userId);
+        List<PostVO> voList = records.stream()
+                .map(p -> toPostVO(p, userId))
+                .collect(Collectors.toList());
+        Page<PostVO> resultPage = new Page<>(page, size);
+        resultPage.setRecords(voList);
+        resultPage.setTotal(total);
+        return resultPage;
+    }
 
     public IPage<PostVO> recommendPosts(Long userId, Integer userRole, Integer page, Integer size) {
         Set<String> interestTags = buildInterestTags(userId);
@@ -327,6 +348,10 @@ public class CommunityService {
         c.setStatus(0);
         c.setCreatedAt(LocalDateTime.now());
         commentMapper.insert(c);
+
+        if (!post.getAuthorId().equals(userId)) {
+            sendInteractionNotification(userId, post.getAuthorId(), "评论了你的帖子", post.getTitle(), postId, "POST_COMMENT");
+        }
     }
 
     @Transactional
@@ -407,6 +432,8 @@ public class CommunityService {
         postMapper.update(null, new LambdaUpdateWrapper<Post>()
                 .eq(Post::getId, postId)
                 .setSql("endorse_count = endorse_count + 1"));
+
+        sendInteractionNotification(userId, post.getAuthorId(), "认可了你的帖子", post.getTitle(), postId, "POST_ENDORSE");
     }
 
     @Transactional
@@ -433,6 +460,9 @@ public class CommunityService {
 
         // 奖励发帖人积分
         pointsService.addPoints(post.getAuthorId(), 20, "EXCELLENT_POST", postId, "帖子被加精为经验帖");
+
+        notificationService.sendNotification(post.getAuthorId(), 1, "帖子被加精",
+                "你的帖子《" + post.getTitle() + "》被加精为经验帖", postId, "POST_EXCELLENT");
     }
 
     // ========== Helper ==========
@@ -475,6 +505,13 @@ public class CommunityService {
             vo.setEndorsed(false);
         }
         return vo;
+    }
+
+    private void sendInteractionNotification(Long actorId, Long receiverId, String action, String postTitle, Long postId, String bizType) {
+        SysUser actor = sysUserMapper.selectById(actorId);
+        String nickname = actor != null ? actor.getNickname() : "有人";
+        notificationService.sendNotification(receiverId, 1, "新的" + action.split("了")[0],
+                nickname + action + "《" + postTitle + "》", postId, bizType);
     }
 
     private boolean isAdmin(Long userId) {

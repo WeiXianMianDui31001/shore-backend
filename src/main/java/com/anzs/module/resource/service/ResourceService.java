@@ -15,9 +15,11 @@ import com.anzs.module.resource.mapper.ResourceMapper;
 import com.anzs.module.user.entity.PointsRule;
 import com.anzs.module.user.entity.PointsTransaction;
 import com.anzs.module.user.entity.SysUser;
+import com.anzs.module.user.entity.UserFavorite;
 import com.anzs.module.user.mapper.PointsRuleMapper;
 import com.anzs.module.user.mapper.PointsTransactionMapper;
 import com.anzs.module.user.mapper.SysUserMapper;
+import com.anzs.module.user.mapper.UserFavoriteMapper;
 import com.anzs.module.user.service.PointsService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -30,8 +32,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -47,6 +51,7 @@ public class ResourceService {
     private final PointsService pointsService;
     private final RedisCache redisCache;
     private final AliOssService aliOssService;
+    private final UserFavoriteMapper userFavoriteMapper;
 
     public IPage<Resource> list(String keyword, String category, Integer page, Integer size) {
         Page<Resource> p = new Page<>(page, size);
@@ -79,7 +84,6 @@ public class ResourceService {
         map.put("title", r.getTitle());
         map.put("description", r.getDescription());
         map.put("category", r.getCategory());
-        map.put("tags", r.getTags());
         map.put("fileSize", r.getFileSize());
         map.put("fileType", r.getFileType());
         map.put("pointsCost", r.getPointsCost());
@@ -88,7 +92,13 @@ public class ResourceService {
         map.put("uploaderId", r.getUploaderId());
         boolean canDownload = currentUserId != null && (currentUserId.equals(r.getUploaderId())
                 || hasDownloaded(currentUserId, r.getId()));
+        boolean collected = currentUserId != null && userFavoriteMapper.selectCount(
+                new LambdaQueryWrapper<UserFavorite>()
+                        .eq(UserFavorite::getUserId, currentUserId)
+                        .eq(UserFavorite::getTargetType, "RESOURCE")
+                        .eq(UserFavorite::getTargetId, id)) > 0;
         map.put("canDownload", canDownload);
+        map.put("collected", collected);
         map.put("fileUrl", null); // 不直接暴露原始 OSS URL
         return map;
     }
@@ -135,7 +145,6 @@ public class ResourceService {
         r.setUploaderId(userId);
         r.setTitle(dto.getTitle());
         r.setCategory(dto.getCategory());
-        r.setTags(dto.getTags());
         r.setDescription(dto.getDescription());
         r.setObjectKey(objectKey); // 存 objectKey，供下载时生成预签名URL
         r.setFileSize(fileSize);
@@ -193,12 +202,12 @@ public class ResourceService {
         }
 
         // 扣减下载者积分（走统一积分服务）
-        boolean ok = pointsService.deductPoints(userId, r.getPointsCost(), "DOWNLOAD", resourceId, "下载资源");
+        boolean ok = pointsService.deductPoints(userId, r.getPointsCost(), "DOWNLOAD_COST", resourceId, "下载资源");
         if (!ok) throw new BizException("积分不足或并发冲突，请重试");
 
         // 上传者分成（走统一积分服务）
         if (reward > 0) {
-            pointsService.addPoints(r.getUploaderId(), reward, "DOWNLOAD_REWARD", resourceId, "资源被下载奖励");
+            pointsService.addPoints(r.getUploaderId(), reward, "DOWNLOAD_SHARE", resourceId, "资源被下载奖励");
         }
 
         // 下载记录
@@ -223,5 +232,67 @@ public class ResourceService {
         map.put("fileUrl", aliOssService.generateDownloadUrl(r.getObjectKey()));
         map.put("costPoints", r.getPointsCost());
         return map;
+    }
+
+    // ========== Favorite / Collect ==========
+
+    @Transactional
+    public void collectResource(Long userId, Long resourceId) {
+        Resource r = resourceMapper.selectById(resourceId);
+        if (r == null) throw new BizException("资源不存在");
+        long count = userFavoriteMapper.selectCount(new LambdaQueryWrapper<UserFavorite>()
+                .eq(UserFavorite::getUserId, userId)
+                .eq(UserFavorite::getTargetType, "RESOURCE")
+                .eq(UserFavorite::getTargetId, resourceId));
+        if (count > 0) return;
+        UserFavorite f = new UserFavorite();
+        f.setUserId(userId);
+        f.setTargetType("RESOURCE");
+        f.setTargetId(resourceId);
+        f.setCreatedAt(LocalDateTime.now());
+        userFavoriteMapper.insert(f);
+    }
+
+    @Transactional
+    public void uncollectResource(Long userId, Long resourceId) {
+        long count = userFavoriteMapper.selectCount(new LambdaQueryWrapper<UserFavorite>()
+                .eq(UserFavorite::getUserId, userId)
+                .eq(UserFavorite::getTargetType, "RESOURCE")
+                .eq(UserFavorite::getTargetId, resourceId));
+        if (count == 0) return;
+        userFavoriteMapper.delete(new LambdaQueryWrapper<UserFavorite>()
+                .eq(UserFavorite::getUserId, userId)
+                .eq(UserFavorite::getTargetType, "RESOURCE")
+                .eq(UserFavorite::getTargetId, resourceId));
+    }
+
+    public IPage<Resource> myFavorites(Long userId, Integer page, Integer size) {
+        Page<UserFavorite> p = new Page<>(page, size);
+        LambdaQueryWrapper<UserFavorite> qw = new LambdaQueryWrapper<>();
+        qw.eq(UserFavorite::getUserId, userId)
+          .eq(UserFavorite::getTargetType, "RESOURCE")
+          .orderByDesc(UserFavorite::getCreatedAt);
+        IPage<UserFavorite> favPage = userFavoriteMapper.selectPage(p, qw);
+
+        List<Long> resourceIds = favPage.getRecords().stream()
+                .map(UserFavorite::getTargetId)
+                .collect(java.util.stream.Collectors.toList());
+
+        List<Resource> resources = resourceIds.isEmpty() ? java.util.Collections.emptyList() :
+                resourceMapper.selectList(new LambdaQueryWrapper<Resource>()
+                        .in(Resource::getId, resourceIds));
+
+        Map<Long, Resource> resourceMap = resources.stream()
+                .collect(java.util.stream.Collectors.toMap(Resource::getId, r -> r));
+
+        List<Resource> ordered = favPage.getRecords().stream()
+                .map(f -> resourceMap.get(f.getTargetId()))
+                .filter(r -> r != null)
+                .collect(java.util.stream.Collectors.toList());
+
+        Page<Resource> result = new Page<>(page, size);
+        result.setRecords(ordered);
+        result.setTotal(favPage.getTotal());
+        return result;
     }
 }

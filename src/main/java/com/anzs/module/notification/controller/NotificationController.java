@@ -39,4 +39,10 @@ public class NotificationController {
         notificationService.readAll(user.getUser().getId());
         return Result.ok();
     }
+
+    @GetMapping("/unread-count")
+    public Result<Map<String, Long>> unreadCount(@AuthenticationPrincipal SecurityUser user) {
+        long count = notificationService.getUnreadCount(user.getUser().getId());
+        return Result.ok(Map.of("count", count));
+    }
 }
