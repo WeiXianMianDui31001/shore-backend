@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/info")
 @RequiredArgsConstructor
@@ -27,5 +29,10 @@ public class InfoController {
     @GetMapping("/{id}")
     public Result<InfoEntry> detail(@PathVariable Long id) {
         return Result.ok(infoService.detail(id));
+    }
+
+    @GetMapping("/categories")
+    public Result<List<String>> categories(@RequestParam(required = false) Integer scene) {
+        return Result.ok(infoService.categories(scene));
     }
 }
