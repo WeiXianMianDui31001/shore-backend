@@ -13,6 +13,7 @@ import com.anzs.module.community.mapper.PostCollectMapper;
 import com.anzs.module.community.mapper.PostEndorseMapper;
 import com.anzs.module.community.mapper.PostLikeMapper;
 import com.anzs.module.community.mapper.PostMapper;
+import com.anzs.module.community.vo.CommentVO;
 import com.anzs.module.community.vo.PostVO;
 import com.anzs.module.notification.service.NotificationService;
 import com.anzs.module.user.entity.SysUser;
@@ -320,13 +321,34 @@ public class CommunityService {
 
     // ========== Comment ==========
 
-    public List<Comment> comments(Long postId) {
-        return commentMapper.selectList(
+    public List<CommentVO> comments(Long postId) {
+        List<Comment> list = commentMapper.selectList(
                 new LambdaQueryWrapper<Comment>()
                         .eq(Comment::getPostId, postId)
                         .in(Comment::getStatus, 0, 1)
                         .orderByDesc(Comment::getCreatedAt)
         );
+        return list.stream().map(this::toCommentVO).collect(Collectors.toList());
+    }
+
+    private CommentVO toCommentVO(Comment comment) {
+        CommentVO vo = new CommentVO();
+        vo.setId(comment.getId());
+        vo.setPostId(comment.getPostId());
+        vo.setParentId(comment.getParentId());
+        vo.setAuthorId(comment.getAuthorId());
+        vo.setContent(comment.getContent());
+        vo.setImages(comment.getImages());
+        vo.setStatus(comment.getStatus());
+        vo.setCreatedAt(comment.getCreatedAt());
+
+        SysUser author = sysUserMapper.selectById(comment.getAuthorId());
+        if (author != null) {
+            vo.setAuthorNickname(author.getNickname());
+            vo.setAuthorAvatar(author.getAvatarUrl());
+            vo.setAuthorRole(author.getRole());
+        }
+        return vo;
     }
 
     @Transactional

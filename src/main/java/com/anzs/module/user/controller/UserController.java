@@ -10,7 +10,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -43,5 +45,14 @@ public class UserController {
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sourceType) {
         return Result.ok(userService.getPointsTransactions(user.getUser().getId(), page, size, sourceType));
+    }
+
+    @PostMapping("/avatar")
+    public Result<Map<String, Object>> uploadAvatar(@AuthenticationPrincipal SecurityUser user,
+                                                    @RequestParam("file") MultipartFile file) {
+        String avatarUrl = userService.uploadAvatar(user.getUser().getId(), file);
+        Map<String, Object> map = new HashMap<>();
+        map.put("url", avatarUrl);
+        return Result.ok(map);
     }
 }
