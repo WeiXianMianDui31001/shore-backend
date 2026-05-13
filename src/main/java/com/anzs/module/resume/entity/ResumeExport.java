@@ -14,5 +14,8 @@ public class ResumeExport {
     private Long id;
     private Long resumeId;
     private String pdfUrl;
+    private Integer status;      // 0-PROCESSING 1-SUCCESS 2-FAILED
+    private Long fileSize;
+    private String errorMessage;
     private LocalDateTime createdAt;
 }

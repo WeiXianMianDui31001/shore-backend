@@ -14,10 +14,16 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Value("${shore.upload.path}")
     private String uploadPath;
 
+    @Value("${shore.pdf.temp-dir:./temp/pdf}")
+    private String pdfTempDir;
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         Path uploadDir = Paths.get(uploadPath);
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations(uploadDir.toUri().toString());
+        Path pdfDir = Paths.get(pdfTempDir).toAbsolutePath();
+        registry.addResourceHandler("/exports/**")
+                .addResourceLocations(pdfDir.toUri().toString());
     }
 }

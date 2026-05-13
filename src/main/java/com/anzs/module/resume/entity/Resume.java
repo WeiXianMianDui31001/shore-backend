@@ -20,6 +20,7 @@ public class Resume {
     @TableField(typeHandler = PgJsonbTypeHandler.class)
     private String contentJson;
     private Integer version;
+    private Long currentVersionId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

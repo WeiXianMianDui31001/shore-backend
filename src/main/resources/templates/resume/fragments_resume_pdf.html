@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!-- PDF 简历共享片段：页眉修复 + 多种 section layout（Flying Saucer 友好：少用 flex，多用 table/float） -->
+
+<th:block th:fragment="styles_classic">
+<style type="text/css">
+  @page { margin: 22px 28px; size: A4; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body.pdf-resume {
+    font-family: 'Noto Sans CJK SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+    font-size: 12.5px; color: #222; line-height: 1.55;
+  }
+  .hdr { padding-bottom: 14px; border-bottom: 2px solid #1a3a5c; margin-bottom: 18px; }
+  .hdr .name {
+    text-align: center; font-size: 26px; font-weight: 700; color: #1a3a5c;
+    letter-spacing: 4px; margin-bottom: 12px;
+  }
+  .hdr-meta { width: 100%; max-width: 520px; margin: 0 auto; border-collapse: collapse; }
+  .hdr-meta tr { vertical-align: top; }
+  .hdr-meta .lbl {
+    color: #666; font-weight: 500; white-space: nowrap; padding: 3px 10px 3px 0;
+    width: 88px; text-align: right;
+  }
+  .hdr-meta .lbl:after { content: ''; }
+  .hdr-meta .val { color: #222; padding: 3px 0; word-break: break-all; }
+  .sec { margin-bottom: 16px; page-break-inside: avoid; }
+  .sec h2 {
+    font-size: 14px; font-weight: 700; color: #1a3a5c; margin: 0 0 8px 0;
+    padding-bottom: 4px; border-bottom: 1px solid #1a3a5c;
+  }
+  .entry { margin-bottom: 10px; }
+  .entry-multi { padding-top: 8px; margin-top: 8px; border-top: 1px dashed #ccc; }
+  .entry-multi:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+  .ehd { width: 100%; margin-bottom: 6px; overflow: hidden; }
+  .ehd .ehd-title { font-weight: 700; color: #111; display: inline; max-width: 72%; }
+  .ehd .ehd-date { float: right; color: #555; font-size: 12px; white-space: nowrap; }
+  .clearfix:after { content: ''; display: block; clear: both; }
+  .subline { font-size: 12px; color: #444; margin: 2px 0 6px 12px; }
+  .body-p { font-size: 12.5px; color: #333; margin: 4px 0 4px 12px; text-align: justify; }
+  .bullets { margin: 4px 0 4px 18px; padding: 0; }
+  .bullets li { margin: 2px 0; list-style: disc; }
+  .kv-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  .kv-table td { padding: 3px 4px; vertical-align: top; font-size: 12.5px; }
+  .kv-table .k { color: #555; font-weight: 500; width: 22%; white-space: nowrap; }
+  .kv-table .k:after { content: '：'; }
+  .kv-table .v { color: #222; width: 78%; word-break: break-word; }
+</style>
+</th:block>
+
+<th:block th:fragment="styles_internet">
+<style type="text/css">
+  @page { margin: 22px 28px; size: A4; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body.pdf-resume {
+    font-family: 'Noto Sans CJK SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+    font-size: 12.5px; color: #222; line-height: 1.55;
+  }
+  .hdr { padding-bottom: 14px; border-bottom: 2px solid #2c3e50; margin-bottom: 18px; }
+  .hdr .name {
+    text-align: center; font-size: 26px; font-weight: 700; color: #2c3e50;
+    letter-spacing: 4px; margin-bottom: 12px;
+  }
+  .hdr-meta { width: 100%; max-width: 520px; margin: 0 auto; border-collapse: collapse; }
+  .hdr-meta tr { vertical-align: top; }
+  .hdr-meta .lbl {
+    color: #666; font-weight: 500; white-space: nowrap; padding: 3px 10px 3px 0;
+    width: 88px; text-align: right;
+  }
+  .hdr-meta .lbl:after { content: ''; }
+  .hdr-meta .val { color: #222; padding: 3px 0; word-break: break-all; }
+  .sec { margin-bottom: 16px; page-break-inside: avoid; }
+  .sec h2 {
+    font-size: 14px; font-weight: 700; color: #2c3e50; margin: 0 0 8px 0;
+    padding-bottom: 4px; border-bottom: 1px solid #2c3e50;
+  }
+  .entry { margin-bottom: 10px; }
+  .entry-multi { padding-top: 8px; margin-top: 8px; border-top: 1px dashed #ccc; }
+  .entry-multi:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+  .ehd { width: 100%; margin-bottom: 6px; overflow: hidden; }
+  .ehd .ehd-title { font-weight: 700; color: #111; display: inline; max-width: 72%; }
+  .ehd .ehd-date { float: right; color: #555; font-size: 12px; white-space: nowrap; }
+  .clearfix:after { content: ''; display: block; clear: both; }
+  .subline { font-size: 12px; color: #444; margin: 2px 0 6px 12px; }
+  .body-p { font-size: 12.5px; color: #333; margin: 4px 0 4px 12px; text-align: justify; }
+  .bullets { margin: 4px 0 4px 18px; padding: 0; }
+  .bullets li { margin: 2px 0; list-style: disc; }
+  .kv-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  .kv-table td { padding: 3px 4px; vertical-align: top; font-size: 12.5px; }
+  .kv-table .k { color: #555; font-weight: 500; width: 22%; white-space: nowrap; }
+  .kv-table .k:after { content: '：'; }
+  .kv-table .v { color: #222; width: 78%; word-break: break-word; }
+</style>
+</th:block>
+
+<!-- 借鉴常见中文简历（Overleaf 类）：黑白印刷风、左对齐姓名、右上证件照 -->
+<th:block th:fragment="styles_cn_print">
+<style type="text/css">
+  @page { margin: 20mm 18mm; size: A4; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body.pdf-resume {
+    font-family: 'Noto Sans CJK SC', 'Noto Sans SC', 'Microsoft YaHei', 'SimHei', sans-serif;
+    font-size: 12px; color: #111; line-height: 1.5;
+  }
+  .hdr-side { padding-bottom: 12px; border-bottom: 1px solid #000; margin-bottom: 16px; }
+  .hdr-table { width: 100%; border-collapse: collapse; }
+  .hdr-left { padding-right: 12px; vertical-align: top; }
+  .hdr-right { width: 100px; vertical-align: top; text-align: right; }
+  .hdr-side .name {
+    text-align: left; font-size: 20px; font-weight: 700; color: #000;
+    letter-spacing: 1px; margin-bottom: 8px;
+  }
+  .hdr-side .hdr-meta { width: 100%; border-collapse: collapse; margin-top: 2px; }
+  .hdr-side .hdr-meta tr { vertical-align: top; }
+  .hdr-side .hdr-meta .lbl {
+    color: #333; font-weight: 500; white-space: nowrap; padding: 2px 8px 2px 0;
+    width: 72px; text-align: left;
+  }
+  .hdr-side .hdr-meta .val { color: #111; padding: 2px 0; word-break: break-all; }
+  .photo {
+    width: 88px; height: 118px; object-fit: cover;
+    border: 1px solid #ccc;
+  }
+  .sec { margin-bottom: 14px; page-break-inside: avoid; }
+  .sec h2 {
+    font-size: 13px; font-weight: 700; color: #000; margin: 0 0 6px 0;
+    padding-bottom: 3px; border-bottom: 1px solid #000;
+  }
+  .entry { margin-bottom: 10px; }
+  .entry-multi { padding-top: 8px; margin-top: 8px; border-top: 1px dashed #999; }
+  .entry-multi:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+  .ehd { width: 100%; margin-bottom: 5px; overflow: hidden; }
+  .ehd .ehd-title { font-weight: 700; color: #000; display: inline; max-width: 70%; }
+  .ehd .ehd-date { float: right; color: #333; font-size: 11px; white-space: nowrap; }
+  .clearfix:after { content: ''; display: block; clear: both; }
+  .subline { font-size: 11px; color: #222; margin: 2px 0 5px 10px; }
+  .body-p { font-size: 12px; color: #111; margin: 3px 0 3px 10px; text-align: justify; }
+  .bullets { margin: 3px 0 3px 16px; padding: 0; }
+  .bullets li { margin: 2px 0; list-style: disc; color: #111; }
+  .kv-table { width: 100%; border-collapse: collapse; margin-top: 3px; }
+  .kv-table td { padding: 2px 3px; vertical-align: top; font-size: 12px; }
+  .kv-table .k { color: #333; font-weight: 500; width: 20%; white-space: nowrap; }
+  .kv-table .k:after { content: '：'; }
+  .kv-table .v { color: #111; width: 80%; word-break: break-word; }
+</style>
+</th:block>
+
+<th:block th:fragment="basic_header(sections)">
+  <th:block th:each="sec : ${sections}" th:if="${sec.key == 'basic'}">
+    <div class="hdr">
+      <div class="name" th:with="row0=${sec.items[0]}"
+           th:text="${row0 != null and row0['姓名'] != null and !#strings.isEmpty(#strings.toString(row0['姓名']))} ? ${row0['姓名']} : '姓名'">姓名</div>
+      <table class="hdr-meta" th:if="${sec.items != null and !sec.items.isEmpty()}">
+        <!-- 使用 entrySet：keySet() 在部分 EL/Thymeleaf 环境下无法正确迭代，会导致仅姓名可见 -->
+        <tr th:each="e : ${sec.items[0].entrySet()}"
+            th:if="${e.key != '姓名' and e.value != null and !#strings.isEmpty(#strings.toString(e.value))}">
+          <td class="lbl" th:text="${e.key + '：'}">标签</td>
+          <td class="val" th:text="${e.value}">值</td>
+        </tr>
+      </table>
+    </div>
+  </th:block>
+</th:block>
+
+<th:block th:fragment="basic_header_side_photo(sections)">
+  <th:block th:each="sec : ${sections}" th:if="${sec.key == 'basic'}">
+    <div class="hdr hdr-side">
+      <table class="hdr-table"><tr>
+        <td class="hdr-left">
+          <div class="name" th:with="row0=${sec.items[0]}"
+               th:text="${row0 != null and row0['姓名'] != null and !#strings.isEmpty(#strings.toString(row0['姓名']))} ? ${row0['姓名']} : '姓名'">姓名</div>
+          <table class="hdr-meta" th:if="${sec.items != null and !sec.items.isEmpty()}">
+            <tr th:each="e : ${sec.items[0].entrySet()}"
+                th:if="${e.key != '姓名' and e.key != '证件照' and e.key != '照片'
+                and e.value != null and !#strings.isEmpty(#strings.toString(e.value))}">
+              <td class="lbl" th:text="${e.key + '：'}">标签</td>
+              <td class="val" th:text="${e.value}">值</td>
+            </tr>
+          </table>
+        </td>
+        <td class="hdr-right">
+          <th:block th:with="row0=${sec.items[0]}">
+            <img th:if="${row0 != null and row0['证件照'] != null and !#strings.isEmpty(#strings.toString(row0['证件照']))}"
+                 th:src="${row0['证件照']}" class="photo" width="88" height="118" alt=""/>
+            <img th:if="${row0 != null and (row0['证件照'] == null or #strings.isEmpty(#strings.toString(row0['证件照'])))
+                 and row0['照片'] != null and !#strings.isEmpty(#strings.toString(row0['照片']))}"
+                 th:src="${row0['照片']}" class="photo" width="88" height="118" alt=""/>
+          </th:block>
+        </td>
+      </tr></table>
+    </div>
+  </th:block>
+</th:block>
+
+<th:block th:fragment="section_content(sec)">
+  <div th:if="${sec.items != null}" th:each="item,iter : ${sec.items}"
+       th:class="${sec.items.size() > 1 ? 'entry entry-multi' : 'entry'}">
+    <!-- layout: 标题 + 右侧日期 + 可选补充行（教育/获奖） -->
+    <th:block th:if="${sec.layout == 'entry_headline_date'}">
+      <div class="ehd clearfix">
+        <span class="ehd-date" th:text="${#maps.containsKey(item, '_dateRange') ? item['_dateRange'] : ''}">日期</span>
+        <span class="ehd-title" th:text="${#maps.containsKey(item, '_headline') ? item['_headline'] : ''}">标题</span>
+      </div>
+      <table class="kv-table" th:if="${#maps.containsKey(item, '_extraRows') and !item['_extraRows'].isEmpty()}">
+        <tr th:each="row : ${item['_extraRows']}">
+          <td class="k" th:text="${row.k}">k</td>
+          <td class="v" th:text="${row.v}">v</td>
+        </tr>
+      </table>
+    </th:block>
+    <!-- layout: 经历类 — 主标题、日期、副标题、正文、要点列表 -->
+    <th:block th:if="${sec.layout == 'rich_entry'}">
+      <div class="ehd clearfix">
+        <span class="ehd-date" th:text="${#maps.containsKey(item, '_dateRange') ? item['_dateRange'] : ''}">日期</span>
+        <span class="ehd-title" th:text="${#maps.containsKey(item, '_headline') ? item['_headline'] : ''}">标题</span>
+      </div>
+      <div class="subline" th:if="${#maps.containsKey(item, '_subline') and !#strings.isEmpty(item['_subline'])}" th:text="${item['_subline']}">副标题</div>
+      <p class="body-p" th:if="${#maps.containsKey(item, '_body') and !#strings.isEmpty(item['_body'])}" th:text="${item['_body']}">正文</p>
+      <ul class="bullets" th:if="${#maps.containsKey(item, '_bullets') and !item['_bullets'].isEmpty()}">
+        <li th:each="b : ${item['_bullets']}" th:text="${b}">要点</li>
+      </ul>
+      <table class="kv-table" th:if="${#maps.containsKey(item, '_extraRows') and !item['_extraRows'].isEmpty()}">
+        <tr th:each="row : ${item['_extraRows']}">
+          <td class="k" th:text="${row.k}">k</td>
+          <td class="v" th:text="${row.v}">v</td>
+        </tr>
+      </table>
+    </th:block>
+    <!-- layout: 双列表格键值（默认） -->
+    <th:block th:if="${sec.layout == null or sec.layout == 'kv'}">
+      <table class="kv-table">
+        <tr th:each="e : ${item.entrySet()}"
+            th:if="${e.key != null and !#strings.startsWith(e.key, '_')
+            and e.value != null and !#strings.isEmpty(#strings.toString(e.value))}">
+          <td class="k" th:text="${e.key}">键</td>
+          <td class="v" th:text="${e.value}">值</td>
+        </tr>
+      </table>
+    </th:block>
+  </div>
+</th:block>
+
+<th:block th:fragment="page_body(sections)">
+  <th:block th:replace="~{fragments_resume_pdf :: basic_header(sections=${sections})}"/>
+  <div th:each="sec : ${sections}" th:if="${sec.key != 'basic'}" class="sec">
+    <h2 th:text="${sec.title}">章节</h2>
+    <th:block th:replace="~{fragments_resume_pdf :: section_content(sec=${sec})}"/>
+  </div>
+</th:block>
+
+<th:block th:fragment="page_body_cn_print(sections)">
+  <th:block th:replace="~{fragments_resume_pdf :: basic_header_side_photo(sections=${sections})}"/>
+  <div th:each="sec : ${sections}" th:if="${sec.key != 'basic'}" class="sec">
+    <h2 th:text="${sec.title}">章节</h2>
+    <th:block th:replace="~{fragments_resume_pdf :: section_content(sec=${sec})}"/>
+  </div>
+</th:block>
+
+</html>

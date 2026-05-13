@@ -57,3 +57,7 @@ volumes/
 
 ### Application Secrets ###
 src/main/resources/application-dev.yml
+
+*.md
+*.mjs
+*.doc

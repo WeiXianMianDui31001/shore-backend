@@ -19,6 +19,8 @@ public class ResumeTemplate {
     private String thumbnailUrl;
     @TableField(typeHandler = PgJsonbTypeHandler.class)
     private String structureJson;
+    private String templateKey;
+    private String templateVersion;
     private Integer status;      // 0-启用 1-禁用
     private LocalDateTime createdAt;
 }

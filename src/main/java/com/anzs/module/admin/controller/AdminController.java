@@ -13,9 +13,12 @@ import com.anzs.module.info.entity.InfoEntry;
 import com.anzs.module.resource.entity.Resource;
 import com.anzs.module.user.entity.PointsRule;
 import com.anzs.module.user.entity.SysUser;
+import com.anzs.module.resume.dto.request.ResumeTemplateSaveDTO;
+import com.anzs.module.resume.dto.response.ResumeTemplateAdminVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -150,6 +153,42 @@ public class AdminController {
     public Result<Void> excellentPost(@AuthenticationPrincipal SecurityUser user,
                                       @PathVariable Long id) {
         adminService.excellentPost(user.getUser().getId(), id);
+        return Result.ok();
+    }
+
+    // === 简历模板管理 ===
+    @GetMapping("/resume-templates")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<IPage<ResumeTemplateAdminVO>> resumeTemplates(
+            @RequestParam(required = false) Integer type,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+        return Result.ok(adminService.listResumeTemplates(type, status, page, size));
+    }
+
+    @PostMapping("/resume-templates")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Void> createResumeTemplate(@AuthenticationPrincipal SecurityUser user,
+                                              @Valid @RequestBody ResumeTemplateSaveDTO dto) {
+        adminService.createResumeTemplate(user.getUser().getId(), dto);
+        return Result.ok();
+    }
+
+    @PutMapping("/resume-templates/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Void> updateResumeTemplate(@AuthenticationPrincipal SecurityUser user,
+                                              @PathVariable Long id,
+                                              @Valid @RequestBody ResumeTemplateSaveDTO dto) {
+        adminService.updateResumeTemplate(user.getUser().getId(), id, dto);
+        return Result.ok();
+    }
+
+    @DeleteMapping("/resume-templates/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Void> deleteResumeTemplate(@AuthenticationPrincipal SecurityUser user,
+                                              @PathVariable Long id) {
+        adminService.deleteResumeTemplate(user.getUser().getId(), id);
         return Result.ok();
     }
 }
