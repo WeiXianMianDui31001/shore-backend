@@ -24,10 +24,16 @@ public class RoomSessionManager {
     private final Map<Long, Map<String, WebSocketSession>> roomSessions = new ConcurrentHashMap<>();
     // roomId -> sequence counter (for both chat and whiteboard)
     private final Map<Long, AtomicLong> roomSequence = new ConcurrentHashMap<>();
+    // roomId -> userId -> {nickname, avatarUrl}
+    private final Map<Long, Map<Long, Map<String, String>>> roomUserInfo = new ConcurrentHashMap<>();
 
-    public void addSession(Long roomId, WebSocketSession session, Long userId) {
+    public void addSession(Long roomId, WebSocketSession session, Long userId, String nickname, String avatarUrl) {
         roomSessions.computeIfAbsent(roomId, k -> new ConcurrentHashMap<>()).put(session.getId(), session);
         roomSequence.putIfAbsent(roomId, new AtomicLong(System.currentTimeMillis()));
+        Map<String, String> info = new ConcurrentHashMap<>();
+        info.put("nickname", nickname != null ? nickname : "");
+        info.put("avatarUrl", avatarUrl != null ? avatarUrl : "");
+        roomUserInfo.computeIfAbsent(roomId, k -> new ConcurrentHashMap<>()).put(userId, info);
         roomRedisService.addMember(roomId, userId);
         roomRedisService.updateActivity(roomId);
         roomRedisService.markRoomActive(roomId);
@@ -41,11 +47,22 @@ public class RoomSessionManager {
             if (sessions.isEmpty()) {
                 roomSessions.remove(roomId);
                 roomSequence.remove(roomId);
+                roomUserInfo.remove(roomId);
             }
         }
         roomRedisService.removeMember(roomId, userId);
         roomRedisService.updateActivity(roomId);
         log.info("User {} left room {}, online: {}", userId, roomId, getOnlineCount(roomId));
+    }
+
+    public void updateUserInfo(Long roomId, Long userId, String nickname, String avatarUrl) {
+        Map<Long, Map<String, String>> users = roomUserInfo.get(roomId);
+        if (users != null) {
+            Map<String, String> info = new ConcurrentHashMap<>();
+            info.put("nickname", nickname != null ? nickname : "");
+            info.put("avatarUrl", avatarUrl != null ? avatarUrl : "");
+            users.put(userId, info);
+        }
     }
 
     public long nextSequence(Long roomId) {
@@ -79,5 +96,11 @@ public class RoomSessionManager {
     public boolean hasSessions(Long roomId) {
         Map<String, WebSocketSession> sessions = roomSessions.get(roomId);
         return sessions != null && !sessions.isEmpty();
+    }
+
+    public Map<String, String> getUserInfo(Long roomId, Long userId) {
+        Map<Long, Map<String, String>> users = roomUserInfo.get(roomId);
+        if (users == null) return null;
+        return users.get(userId);
     }
 }

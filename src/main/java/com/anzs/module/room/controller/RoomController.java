@@ -4,11 +4,11 @@ import com.anzs.common.Result;
 import com.anzs.config.security.SecurityUser;
 import com.anzs.module.room.dto.RoomCreateDTO;
 import com.anzs.module.room.dto.RoomJoinDTO;
-import com.anzs.module.room.entity.ChatMessage;
 import com.anzs.module.room.entity.DiscussionRoom;
 import com.anzs.module.room.entity.WhiteboardOperation;
 import com.anzs.module.room.service.RoomRedisService;
 import com.anzs.module.room.service.RoomService;
+import com.anzs.module.room.vo.ChatMessageVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -75,7 +75,7 @@ public class RoomController {
     }
 
     @GetMapping("/{id}/messages")
-    public Result<List<ChatMessage>> messages(
+    public Result<List<ChatMessageVO>> messages(
             @PathVariable Long id,
             @RequestParam(required = false) Long lastSeq,
             @RequestParam(defaultValue = "50") Integer limit) {
