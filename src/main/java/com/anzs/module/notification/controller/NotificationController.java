@@ -18,6 +18,12 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
+    @GetMapping("/unread-count")
+    public Result<Map<String, Long>> unreadCount(@AuthenticationPrincipal SecurityUser user) {
+        long n = notificationService.countUnread(user.getUser().getId());
+        return Result.ok(Map.of("count", n));
+    }
+
     @GetMapping
     public Result<Map<String, Object>> list(
             @AuthenticationPrincipal SecurityUser user,

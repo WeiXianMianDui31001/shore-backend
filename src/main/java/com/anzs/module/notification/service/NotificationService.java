@@ -21,6 +21,14 @@ public class NotificationService {
 
     private final NotificationMapper notificationMapper;
 
+    public long countUnread(Long userId) {
+        return notificationMapper.selectCount(
+                new LambdaQueryWrapper<Notification>()
+                        .eq(Notification::getUserId, userId)
+                        .eq(Notification::getIsRead, false)
+        );
+    }
+
     public Map<String, Object> list(Long userId, Integer type, Integer isRead, Integer page, Integer size) {
         Page<Notification> p = new Page<>(page, size);
         LambdaQueryWrapper<Notification> qw = new LambdaQueryWrapper<>();

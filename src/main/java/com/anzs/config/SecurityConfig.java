@@ -56,7 +56,9 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws/**", "/uploads/**").permitAll()
+                .requestMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws/**", "/uploads/**", "/exports/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/resume/templates", "/api/v1/resume/templates/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/resume/preview-html").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/resources/**", "/api/v1/posts/**", "/api/v1/info/**").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()

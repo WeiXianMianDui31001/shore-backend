@@ -15,6 +15,9 @@ import com.anzs.module.resource.entity.Resource;
 import com.anzs.module.resource.entity.ResourceAudit;
 import com.anzs.module.resource.mapper.ResourceAuditMapper;
 import com.anzs.module.resource.mapper.ResourceMapper;
+import com.anzs.module.resume.dto.request.ResumeTemplateSaveDTO;
+import com.anzs.module.resume.dto.response.ResumeTemplateAdminVO;
+import com.anzs.module.resume.service.ResumeTemplateService;
 import com.anzs.module.user.entity.PointsRule;
 import com.anzs.module.user.entity.SysUser;
 import com.anzs.module.user.mapper.PointsRuleMapper;
@@ -48,6 +51,7 @@ public class AdminService {
     private final NotificationService notificationService;
     private final com.anzs.module.user.service.PointsService pointsService;
     private final com.anzs.infrastructure.storage.AliOssService aliOssService;
+    private final ResumeTemplateService resumeTemplateService;
     private final PasswordEncoder passwordEncoder;
 
     public IPage<Resource> auditList(Integer status, Integer page, Integer size) {
@@ -314,6 +318,27 @@ public class AdminService {
             commentMapper.updateById(c);
         }
         logAdminAction(adminId, "COMMUNITY_" + action, targetType, targetId, Map.of("reason", reason));
+    }
+
+    // === 简历模板管理 ===
+
+    public IPage<ResumeTemplateAdminVO> listResumeTemplates(Integer type, Integer status, int page, int size) {
+        return resumeTemplateService.listAllTemplates(type, status, page, size);
+    }
+
+    public void createResumeTemplate(Long adminId, ResumeTemplateSaveDTO dto) {
+        resumeTemplateService.createTemplate(dto);
+        logAdminAction(adminId, "CREATE_RESUME_TEMPLATE", "RESUME_TEMPLATE", 0L, Map.of("name", dto.getName()));
+    }
+
+    public void updateResumeTemplate(Long adminId, Long id, ResumeTemplateSaveDTO dto) {
+        resumeTemplateService.updateTemplate(id, dto);
+        logAdminAction(adminId, "UPDATE_RESUME_TEMPLATE", "RESUME_TEMPLATE", id, Map.of("name", dto.getName()));
+    }
+
+    public void deleteResumeTemplate(Long adminId, Long id) {
+        resumeTemplateService.deleteTemplate(id);
+        logAdminAction(adminId, "DELETE_RESUME_TEMPLATE", "RESUME_TEMPLATE", id, Map.of());
     }
 
     private void logAdminAction(Long adminId, String action, String targetType, Long targetId, Object detail) {

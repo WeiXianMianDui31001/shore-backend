@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <th:block th:replace="~{fragments_resume_pdf :: styles_classic}"/>
+</head>
+<body class="pdf-resume">
+<th:block th:replace="~{fragments_resume_pdf :: page_body(sections=${sections})}"/>
+</body>
+</html>
