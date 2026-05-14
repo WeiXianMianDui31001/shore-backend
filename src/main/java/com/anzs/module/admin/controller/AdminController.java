@@ -5,6 +5,8 @@ import com.anzs.common.dto.BatchIdsDTO;
 import com.anzs.config.security.SecurityUser;
 import com.anzs.module.admin.dto.AuditDTO;
 import com.anzs.module.admin.dto.CommunityActionDTO;
+import com.anzs.module.admin.dto.PointsRuleUpdateDTO;
+import com.anzs.module.admin.dto.ResetPasswordDTO;
 import com.anzs.module.admin.dto.UserStatusDTO;
 import com.anzs.module.admin.service.AdminService;
 import com.anzs.module.community.entity.Comment;
@@ -107,6 +109,13 @@ public class AdminController {
         return Result.ok();
     }
 
+    @PutMapping("/points-rule/current")
+    public Result<Void> updateCurrentRule(@AuthenticationPrincipal SecurityUser user,
+                                          @RequestBody @Valid PointsRuleUpdateDTO dto) {
+        adminService.updatePointsRuleCurrent(user.getUser().getId(), dto);
+        return Result.ok();
+    }
+
     // === 账号管理 ===
     @GetMapping("/users")
     public Result<IPage<SysUser>> userList(
@@ -128,6 +137,14 @@ public class AdminController {
                                          @PathVariable Long id,
                                          @RequestBody @Valid UserStatusDTO dto) {
         adminService.updateUserStatus(user.getUser().getId(), id, dto.getStatus(), dto.getReason() == null ? "" : dto.getReason());
+        return Result.ok();
+    }
+
+    @PutMapping("/users/{id}/password")
+    public Result<Void> resetUserPassword(@AuthenticationPrincipal SecurityUser user,
+                                          @PathVariable Long id,
+                                          @RequestBody @Valid ResetPasswordDTO dto) {
+        adminService.resetUserPassword(user.getUser().getId(), id, dto.getNewPassword());
         return Result.ok();
     }
 

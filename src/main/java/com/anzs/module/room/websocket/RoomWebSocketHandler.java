@@ -20,11 +20,13 @@ public class RoomWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         Long roomId = extractRoomId(session);
         Long userId = (Long) session.getAttributes().get("userId");
+        String nickname = (String) session.getAttributes().get("nickname");
+        String avatarUrl = (String) session.getAttributes().get("avatarUrl");
         if (roomId == null || userId == null) {
             session.close();
             return;
         }
-        sessionManager.addSession(roomId, session, userId);
+        sessionManager.addSession(roomId, session, userId, nickname, avatarUrl);
     }
 
     @Override

@@ -10,6 +10,9 @@ import com.anzs.module.room.mapper.ChatMessageMapper;
 import com.anzs.module.room.mapper.DiscussionRoomMapper;
 import com.anzs.module.room.mapper.RoomMemberMapper;
 import com.anzs.module.room.mapper.WhiteboardOperationMapper;
+import com.anzs.module.room.vo.ChatMessageVO;
+import com.anzs.module.user.entity.SysUser;
+import com.anzs.module.user.mapper.SysUserMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -20,6 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +35,7 @@ public class RoomService {
     private final RoomMemberMapper memberMapper;
     private final ChatMessageMapper chatMessageMapper;
     private final WhiteboardOperationMapper whiteboardOperationMapper;
+    private final SysUserMapper sysUserMapper;
     private final RoomRedisService roomRedisService;
     private final RoomArchiveService roomArchiveService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -102,25 +109,53 @@ public class RoomService {
         }
     }
 
-    public List<ChatMessage> messageHistory(Long roomId, Long lastSeq, Integer limit) {
+    public List<ChatMessageVO> messageHistory(Long roomId, Long lastSeq, Integer limit) {
+        List<ChatMessage> messages;
         if (roomRedisService.isRoomActive(roomId)) {
-            List<ChatMessage> all = roomRedisService.getAllChatMessages(roomId);
+            messages = roomRedisService.getAllChatMessages(roomId);
             if (lastSeq != null && lastSeq > 0) {
-                all = all.stream().filter(m -> m.getSequenceNo() > lastSeq).toList();
+                messages = messages.stream().filter(m -> m.getSequenceNo() > lastSeq).toList();
             }
-            if (all.size() > limit) {
-                return all.subList(all.size() - limit, all.size());
+            if (messages.size() > limit) {
+                messages = messages.subList(messages.size() - limit, messages.size());
             }
-            return all;
+        } else {
+            LambdaQueryWrapper<ChatMessage> qw = new LambdaQueryWrapper<>();
+            qw.eq(ChatMessage::getRoomId, roomId);
+            if (lastSeq != null && lastSeq > 0) {
+                qw.gt(ChatMessage::getSequenceNo, lastSeq);
+            }
+            qw.orderByAsc(ChatMessage::getSequenceNo);
+            qw.last("LIMIT " + limit);
+            messages = chatMessageMapper.selectList(qw);
         }
-        LambdaQueryWrapper<ChatMessage> qw = new LambdaQueryWrapper<>();
-        qw.eq(ChatMessage::getRoomId, roomId);
-        if (lastSeq != null && lastSeq > 0) {
-            qw.gt(ChatMessage::getSequenceNo, lastSeq);
-        }
-        qw.orderByAsc(ChatMessage::getSequenceNo);
-        qw.last("LIMIT " + limit);
-        return chatMessageMapper.selectList(qw);
+        return toChatMessageVOList(messages);
+    }
+
+    private List<ChatMessageVO> toChatMessageVOList(List<ChatMessage> messages) {
+        Set<Long> senderIds = messages.stream()
+                .map(ChatMessage::getSenderId)
+                .collect(Collectors.toSet());
+        Map<Long, SysUser> userMap = sysUserMapper.selectBatchIds(senderIds).stream()
+                .collect(Collectors.toMap(SysUser::getId, u -> u));
+
+        return messages.stream().map(msg -> {
+            ChatMessageVO vo = new ChatMessageVO();
+            vo.setId(msg.getId());
+            vo.setRoomId(msg.getRoomId());
+            vo.setSenderId(msg.getSenderId());
+            vo.setMsgType(msg.getMsgType());
+            vo.setContent(msg.getContent());
+            vo.setClientMsgId(msg.getClientMsgId());
+            vo.setSequenceNo(msg.getSequenceNo());
+            vo.setCreatedAt(msg.getCreatedAt());
+            SysUser user = userMap.get(msg.getSenderId());
+            if (user != null) {
+                vo.setSenderNickname(user.getNickname());
+                vo.setSenderAvatar(user.getAvatarUrl());
+            }
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     public List<WhiteboardOperation> whiteboardHistory(Long roomId, Long lastSeq, Integer limit) {

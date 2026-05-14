@@ -2,6 +2,8 @@ package com.anzs.config;
 
 import com.anzs.common.util.JwtUtil;
 import com.anzs.module.room.websocket.RoomWebSocketHandler;
+import com.anzs.module.user.entity.SysUser;
+import com.anzs.module.user.mapper.SysUserMapper;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,7 @@ import java.util.Map;
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final JwtUtil jwtUtil;
+    private final SysUserMapper sysUserMapper;
     private final RoomWebSocketHandler roomWebSocketHandler;
 
     @Override
@@ -46,6 +49,11 @@ public class WebSocketConfig implements WebSocketConfigurer {
                         Claims claims = jwtUtil.parseToken(token);
                         Long userId = Long.valueOf(claims.getSubject());
                         attributes.put("userId", userId);
+                        SysUser user = sysUserMapper.selectById(userId);
+                        if (user != null) {
+                            attributes.put("nickname", user.getNickname());
+                            attributes.put("avatarUrl", user.getAvatarUrl());
+                        }
                         return true;
                     } catch (Exception e) {
                         log.warn("WebSocket JWT validation failed");

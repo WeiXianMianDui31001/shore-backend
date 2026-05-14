@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -46,11 +47,17 @@ public class ChatMessageHandler implements WebSocketMessageHandler {
         roomRedisService.pushChatMessage(roomId, msg);
         roomRedisService.updateActivity(roomId);
 
+        Map<String, String> userInfo = sessionManager.getUserInfo(roomId, userId);
+        String nickname = userInfo != null ? userInfo.getOrDefault("nickname", "") : "";
+        String avatarUrl = userInfo != null ? userInfo.getOrDefault("avatarUrl", "") : "";
+
         JSONObject broadcast = new JSONObject();
         broadcast.set("msgType", "CHAT");
         JSONObject data = new JSONObject();
         data.set("sequenceNo", seq);
         data.set("senderId", userId);
+        data.set("senderNickname", nickname);
+        data.set("senderAvatar", avatarUrl);
         data.set("content", content);
         data.set("createdAt", msg.getCreatedAt().toString());
         if (clientMsgId != null) data.set("clientMsgId", clientMsgId);

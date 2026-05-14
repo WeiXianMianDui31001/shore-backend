@@ -42,4 +42,16 @@ public interface PostMapper extends BaseMapper<Post> {
 
     @Select("SELECT COUNT(*) FROM post_collect WHERE post_id = #{postId} AND user_id = #{userId}")
     int countUserCollect(@Param("postId") Long postId, @Param("userId") Long userId);
+
+    @Select("<script>" +
+            "SELECT p.* FROM post p JOIN post_collect pc ON pc.post_id = p.id " +
+            "WHERE pc.user_id = #{userId} AND p.status IN (0,1) " +
+            "ORDER BY pc.created_at DESC " +
+            "LIMIT #{limit} OFFSET #{offset}" +
+            "</script>")
+    List<Post> selectUserCollectedPosts(@Param("userId") Long userId, @Param("offset") int offset, @Param("limit") int limit);
+
+    @Select("SELECT COUNT(*) FROM post p JOIN post_collect pc ON pc.post_id = p.id " +
+            "WHERE pc.user_id = #{userId} AND p.status IN (0,1)")
+    long countUserCollectedPosts(@Param("userId") Long userId);
 }

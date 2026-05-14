@@ -4,8 +4,8 @@ import com.anzs.common.Result;
 import com.anzs.config.security.SecurityUser;
 import com.anzs.module.community.dto.CommentDTO;
 import com.anzs.module.community.dto.PostCreateDTO;
-import com.anzs.module.community.entity.Comment;
 import com.anzs.module.community.service.CommunityService;
+import com.anzs.module.community.vo.CommentVO;
 import com.anzs.module.community.vo.PostVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
@@ -72,6 +72,14 @@ public class CommunityController {
         return Result.ok();
     }
 
+    @GetMapping("/my-collects")
+    public Result<IPage<PostVO>> myCollects(
+            @AuthenticationPrincipal SecurityUser user,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+        return Result.ok(communityService.myCollects(user.getUser().getId(), page, size));
+    }
+
     @GetMapping("/recommend")
     public Result<IPage<PostVO>> recommend(
             @AuthenticationPrincipal SecurityUser user,
@@ -88,7 +96,7 @@ public class CommunityController {
     }
 
     @GetMapping("/{id}/comments")
-    public Result<List<Comment>> comments(@PathVariable Long id) {
+    public Result<List<CommentVO>> comments(@PathVariable Long id) {
         return Result.ok(communityService.comments(id));
     }
 

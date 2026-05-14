@@ -38,7 +38,11 @@ public class NotificationService {
         qw.orderByDesc(Notification::getCreatedAt);
         IPage<Notification> result = notificationMapper.selectPage(p, qw);
 
-        long unreadCount = countUnread(userId);
+        long unreadCount = getUnreadCount(userId);
+
+        for (Notification n : result.getRecords()) {
+            n.setTargetUrl(deriveTargetUrl(n));
+        }
 
         Map<String, Object> map = new HashMap<>();
         map.put("list", result.getRecords());
@@ -49,6 +53,26 @@ public class NotificationService {
                 "total", result.getTotal()
         ));
         return map;
+    }
+
+    public long getUnreadCount(Long userId) {
+        return notificationMapper.selectCount(
+                new LambdaQueryWrapper<Notification>()
+                        .eq(Notification::getUserId, userId)
+                        .eq(Notification::getIsRead, false)
+        );
+    }
+
+    private String deriveTargetUrl(Notification n) {
+        if (n.getBizId() == null) return null;
+        String biz = n.getBizType() != null ? n.getBizType() : "";
+        if (biz.contains("POST") || biz.contains("COMMENT")) {
+            return "/post/" + n.getBizId();
+        }
+        if (biz.contains("RESOURCE")) {
+            return "/resources/" + n.getBizId();
+        }
+        return null;
     }
 
     @Transactional
